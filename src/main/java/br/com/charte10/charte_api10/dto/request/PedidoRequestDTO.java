@@ -1,34 +1,45 @@
+
 package br.com.charte10.charte_api10.dto.request;
 
-import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-
-import java.util.List;
 
 public class PedidoRequestDTO {
 
-    @NotNull(message = "O cliente é obrigatório.")
-    private Integer idCliente;
+    @NotNull(message = "O ID do usuário é obrigatório.")
+    private Integer idUsuario;
 
-    @NotEmpty(message = "O pedido precisa possuir pelo menos uma obra.")
-    private List<ItemPedidoRequestDTO> itens;
+    @NotNull(message = "O ID da arte é obrigatório.")
+    private Integer idArte;
+
+    @NotNull(message = "A quantidade é obrigatória.")
+    @Min(value = 1, message = "A quantidade deve ser pelo menos 1.")
+    private Integer quantidade;
 
     public PedidoRequestDTO() {
     }
 
-    public Integer getIdCliente() {
-        return idCliente;
+    public Integer getIdUsuario() {
+        return idUsuario;
     }
 
-    public void setIdCliente(Integer idCliente) {
-        this.idCliente = idCliente;
+    public void setIdUsuario(Integer idUsuario) {
+        this.idUsuario = idUsuario;
     }
 
-    public List<ItemPedidoRequestDTO> getItens() {
-        return itens;
+    public Integer getIdArte() {
+        return idArte;
     }
 
-    public void setItens(List<ItemPedidoRequestDTO> itens) {
-        this.itens = itens;
+    public void setIdArte(Integer idArte) {
+        this.idArte = idArte;
+    }
+
+    public Integer getQuantidade() {
+        return quantidade;
+    }
+
+    public void setQuantidade(Integer quantidade) {
+        this.quantidade = quantidade;
     }
 }

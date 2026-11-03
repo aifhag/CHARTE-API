@@ -30,8 +30,7 @@ public class ArtistaService {
                                 "Usuário não encontrado."
                         ));
 
-        if (artistaRepository
-                .existsByUsuario_IdUsuario(usuario.getIdUsuario())) {
+        if (artistaRepository.existsById(usuario.getIdUsuario())) {
 
             throw new RuntimeException(
                     "Este usuário já possui perfil de artista."

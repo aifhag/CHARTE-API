@@ -5,10 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface ArtistaRepository extends JpaRepository<Artista, Integer> {
+public interface ArtistaRepository
+        extends JpaRepository<Artista, Integer> {
 
-    Optional<Artista> findByUsuario_IdUsuario(Integer idUsuario);
-
-    boolean existsByUsuario_IdUsuario(Integer idUsuario);
-
+    Optional<Artista> findByUsuarioId(Integer idUsuario);
 }

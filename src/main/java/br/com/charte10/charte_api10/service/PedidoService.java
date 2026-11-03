@@ -1,6 +1,7 @@
+
 package br.com.charte10.charte_api10.service;
 
-import br.com.charte10.charte_api10.dto.request.PedidoRequestDTO;
+import br.com.charte10.charte_api10.dto.request.*;
 import br.com.charte10.charte_api10.entity.Arte;
 import br.com.charte10.charte_api10.entity.ItemPedido;
 import br.com.charte10.charte_api10.entity.Pedido;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class PedidoService {
@@ -27,7 +29,6 @@ public class PedidoService {
             PedidoRepository pedidoRepository,
             UsuarioRepository usuarioRepository,
             ArteRepository arteRepository) {
-
         this.pedidoRepository = pedidoRepository;
         this.usuarioRepository = usuarioRepository;
         this.arteRepository = arteRepository;
@@ -36,63 +37,84 @@ public class PedidoService {
     @Transactional
     public Pedido criar(PedidoRequestDTO dto) {
 
-        Usuario usuario = usuarioRepository.findById(dto.getIdCliente())
+        Usuario usuario = usuarioRepository.findById(dto.getIdUsuario())
                 .orElseThrow(() ->
                         new RecursoNaoEncontradoException(
                                 "Usuário não encontrado."
-                        )
-                );
+                        ));
+
+        Arte arte = arteRepository.findById(dto.getIdArte())
+                .orElseThrow(() ->
+                        new RecursoNaoEncontradoException(
+                                "Arte não encontrada."
+                        ));
+
+        if (!Boolean.TRUE.equals(arte.getDisponivel())) {
+            throw new IllegalArgumentException(
+                    "A obra não está disponível para compra."
+            );
+        }
+
+        if (dto.getQuantidade() == null ||
+                dto.getQuantidade() < 1) {
+            throw new IllegalArgumentException(
+                    "A quantidade deve ser pelo menos 1."
+            );
+        }
+
+        if (arte.getPreco() == null ||
+                arte.getPreco().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException(
+                    "O preço da obra é inválido."
+            );
+        }
 
         Pedido pedido = new Pedido();
-
         pedido.setUsuario(usuario);
         pedido.setStatus(StatusPedido.PENDENTE);
         pedido.setDataPedido(LocalDateTime.now());
+        pedido.setValorTotal(BigDecimal.ZERO);
 
-        BigDecimal total = BigDecimal.ZERO;
-        for (var itemDto : dto.getItens()) {
-            Arte arte = arteRepository.findById(itemDto.getIdArte())
-                    .orElseThrow(() -> new RecursoNaoEncontradoException(
-                            "Arte não encontrada: " + itemDto.getIdArte()
-                    ));
+        ItemPedido item = new ItemPedido();
+        item.setPedido(pedido);
+        item.setArte(arte);
+        item.setQuantidade(dto.getQuantidade());
+        item.setPrecoUnitario(arte.getPreco());
 
-            if (!arte.getDisponivel()) {
-                throw new IllegalArgumentException(
-                        "A arte selecionada não está disponível: " + arte.getIdArte()
-                );
-            }
+        pedido.getItens().add(item);
 
-            ItemPedido item = new ItemPedido();
-            item.setPedido(pedido);
-            item.setArte(arte);
-            item.setQuantidade(itemDto.getQuantidade());
-            item.setPrecoUnitario(arte.getPreco());
-            total = total.add(item.calcularSubtotal());
-            pedido.getItens().add(item);
-        }
-
-        pedido.setValorTotal(total);
+        BigDecimal subtotal = item.calcularSubtotal();
+        pedido.setValorTotal(subtotal);
 
         return pedidoRepository.save(pedido);
     }
 
+    @Transactional(readOnly = true)
     public Pedido buscarPorId(Integer id) {
-
         return pedidoRepository.findById(id)
                 .orElseThrow(() ->
                         new RecursoNaoEncontradoException(
                                 "Pedido não encontrado."
-                        )
-                );
+                        ));
     }
 
-    public Pedido cancelar(Integer id) {
+    @Transactional(readOnly = true)
+    public List<Pedido> listarTodos() {
+        return pedidoRepository.findAll();
+    }
 
+    @Transactional
+    public Pedido cancelar(Integer id) {
         Pedido pedido = buscarPorId(id);
 
-        if (pedido.getStatus() == StatusPedido.FINALIZADO) {
+        if (pedido.getStatus() == StatusPedido.CANCELADO) {
+            throw new IllegalArgumentException(
+                    "Este pedido já está cancelado."
+            );
+        }
 
-            throw new RuntimeException(
+        if (pedido.getStatus() == StatusPedido.FINALIZADO) {
+            throw new IllegalArgumentException(
                     "Não é possível cancelar um pedido finalizado."
             );
         }
@@ -101,20 +123,29 @@ public class PedidoService {
 
         return pedidoRepository.save(pedido);
     }
-    public Pedido alterarStatus(Integer id, StatusPedido novoStatus) {
 
-        Pedido pedido = buscarPorId(id);
+    @Transactional
+    public Pedido alterarStatus(
+            Integer id,
+            StatusPedido novoStatus) {
 
-        if (pedido.getStatus() == StatusPedido.CANCELADO) {
-            throw new RuntimeException(
-                    "Não é possível alterar o status de um pedido cancelado."
+        if (novoStatus == null) {
+            throw new IllegalArgumentException(
+                    "O status é obrigatório."
             );
         }
 
-        if (pedido.getStatus() == StatusPedido.FINALIZADO) {
-            throw new RuntimeException(
-                    "Não é possível alterar o status de um pedido finalizado."
+        Pedido pedido = buscarPorId(id);
+
+        if (pedido.getStatus() == StatusPedido.CANCELADO ||
+                pedido.getStatus() == StatusPedido.FINALIZADO) {
+            throw new IllegalArgumentException(
+                    "Não é possível alterar um pedido cancelado ou finalizado."
             );
+        }
+
+        if (novoStatus == StatusPedido.CANCELADO) {
+            return cancelar(id);
         }
 
         pedido.setStatus(novoStatus);

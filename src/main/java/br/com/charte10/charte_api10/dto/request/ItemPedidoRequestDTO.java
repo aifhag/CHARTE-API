@@ -1,4 +1,4 @@
-package br.com.charte10.charte_api10.dto.request;
+package br.com.charte10.charte_api10.dto;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
